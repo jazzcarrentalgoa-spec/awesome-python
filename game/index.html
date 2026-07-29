@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Iron Front — Multiplayer Arena Shooter</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%230d1117'/%3E%3Ccircle cx='16' cy='16' r='7' fill='none' stroke='%23f0883e' stroke-width='3'/%3E%3Cline x1='16' y1='2' x2='16' y2='9' stroke='%23f0883e' stroke-width='2'/%3E%3Cline x1='16' y1='23' x2='16' y2='30' stroke='%23f0883e' stroke-width='2'/%3E%3Cline x1='2' y1='16' x2='9' y2='16' stroke='%23f0883e' stroke-width='2'/%3E%3Cline x1='23' y1='16' x2='30' y2='16' stroke='%23f0883e' stroke-width='2'/%3E%3C/svg%3E" />
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <div id="app">
+    <!-- ================= MAIN MENU ================= -->
+    <section id="screen-menu" class="screen active">
+      <div class="menu-card">
+        <h1 class="title">IRON<span>FRONT</span></h1>
+        <p class="subtitle">Top-down multiplayer arena shooter</p>
+        <div class="menu-buttons">
+          <button class="btn primary" data-mode="single">Single Player</button>
+          <button class="btn" data-mode="local">Local Multiplayer (2P)</button>
+          <button class="btn" data-mode="online">Online Multiplayer</button>
+        </div>
+        <p class="hint">Configure your <strong>Loadout</strong> and <strong>Army</strong> before deploying.</p>
+        <p class="version">v1.0</p>
+      </div>
+    </section>
+
+    <!-- ================= LOADOUT ================= -->
+    <section id="screen-loadout" class="screen">
+      <div class="config-wrap">
+        <header class="config-head">
+          <h2>Loadout</h2>
+          <span id="loadout-player-label" class="pill">Player 1</span>
+        </header>
+
+        <div class="config-grid">
+          <div class="config-col">
+            <h3>Primary Weapon</h3>
+            <div id="primary-list" class="option-list"></div>
+          </div>
+          <div class="config-col">
+            <h3>Secondary Weapon</h3>
+            <div id="secondary-list" class="option-list"></div>
+          </div>
+          <div class="config-col">
+            <h3>Armor</h3>
+            <div id="armor-list" class="option-list"></div>
+            <h3 style="margin-top:18px">Perk</h3>
+            <div id="perk-list" class="option-list"></div>
+          </div>
+        </div>
+
+        <div class="config-footer">
+          <button class="btn ghost" data-nav="menu">&larr; Back</button>
+          <div id="loadout-summary" class="summary"></div>
+          <button class="btn primary" id="loadout-next">Next: Army &rarr;</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= ARMY SETUP ================= -->
+    <section id="screen-army" class="screen">
+      <div class="config-wrap">
+        <header class="config-head">
+          <h2>Army Setup</h2>
+          <span id="army-player-label" class="pill">Player 1</span>
+        </header>
+
+        <div class="config-col">
+          <h3>Faction</h3>
+          <div id="faction-list" class="option-list horizontal"></div>
+        </div>
+
+        <div class="army-builder">
+          <div class="config-col">
+            <h3>Deploy Units <small>(drag your budget)</small></h3>
+            <div id="unit-list" class="option-list"></div>
+          </div>
+          <div class="config-col squad-col">
+            <h3>Your Squad</h3>
+            <div class="budget-bar">
+              <span>Deployment points</span>
+              <div class="budget-track"><div id="budget-fill" class="budget-fill"></div></div>
+              <span id="budget-text">0 / 20</span>
+            </div>
+            <ul id="squad-list" class="squad-list"></ul>
+          </div>
+        </div>
+
+        <div class="config-footer">
+          <button class="btn ghost" data-nav="loadout">&larr; Back</button>
+          <div id="army-summary" class="summary"></div>
+          <button class="btn primary" id="army-next">Deploy &rarr;</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= ONLINE LOBBY ================= -->
+    <section id="screen-online" class="screen">
+      <div class="menu-card">
+        <h2>Online Multiplayer</h2>
+        <label class="field">
+          <span>Server URL</span>
+          <input id="server-url" type="text" value="ws://localhost:8080" />
+        </label>
+        <label class="field">
+          <span>Room code</span>
+          <input id="room-code" type="text" value="arena-1" />
+        </label>
+        <label class="field">
+          <span>Callsign</span>
+          <input id="callsign" type="text" value="Soldier" />
+        </label>
+        <div id="online-status" class="status">Not connected</div>
+        <div class="menu-buttons">
+          <button class="btn ghost" data-nav="menu">&larr; Back</button>
+          <button class="btn primary" id="online-connect">Connect &amp; Configure</button>
+        </div>
+        <p class="hint">Start the server with <code>node game/server/server.js</code>. If no server is
+          reachable, the match falls back to offline bots automatically.</p>
+      </div>
+    </section>
+
+    <!-- ================= GAME ================= -->
+    <section id="screen-game" class="screen">
+      <canvas id="game-canvas"></canvas>
+      <div id="hud" class="hud"></div>
+      <div id="game-message" class="game-message hidden"></div>
+      <button class="btn ghost small quit-btn" data-nav="menu">Quit</button>
+    </section>
+  </div>
+
+  <!-- classic scripts (global namespace) so the game runs from static hosting or file:// -->
+  <script src="js/loadout.js"></script>
+  <script src="js/army.js"></script>
+  <script src="js/input.js"></script>
+  <script src="js/entities.js"></script>
+  <script src="js/net.js"></script>
+  <script src="js/game.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>
