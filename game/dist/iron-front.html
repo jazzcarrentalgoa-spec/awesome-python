@@ -1,0 +1,1472 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Iron Front — Multiplayer Arena Shooter</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%230d1117'/%3E%3Ccircle cx='16' cy='16' r='7' fill='none' stroke='%23f0883e' stroke-width='3'/%3E%3Cline x1='16' y1='2' x2='16' y2='9' stroke='%23f0883e' stroke-width='2'/%3E%3Cline x1='16' y1='23' x2='16' y2='30' stroke='%23f0883e' stroke-width='2'/%3E%3Cline x1='2' y1='16' x2='9' y2='16' stroke='%23f0883e' stroke-width='2'/%3E%3Cline x1='23' y1='16' x2='30' y2='16' stroke='%23f0883e' stroke-width='2'/%3E%3C/svg%3E" />
+  <style>
+:root {
+  --bg: #0d1117;
+  --panel: #161b22;
+  --panel-2: #1f2733;
+  --border: #2a3340;
+  --accent: #f0883e;
+  --accent-2: #58a6ff;
+  --good: #3fb950;
+  --bad: #f85149;
+  --text: #e6edf3;
+  --muted: #8b949e;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font-family: "Segoe UI", system-ui, -apple-system, Roboto, Helvetica, Arial, sans-serif;
+  overflow: hidden;
+}
+
+#app { width: 100vw; height: 100vh; position: relative; }
+
+.screen {
+  position: absolute;
+  inset: 0;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+.screen.active { display: flex; }
+
+/* ---------- buttons ---------- */
+.btn {
+  font: inherit;
+  font-weight: 600;
+  color: var(--text);
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px 20px;
+  cursor: pointer;
+  transition: transform .05s ease, background .15s ease, border-color .15s ease;
+}
+.btn:hover { background: #27313d; border-color: #3d4a5c; }
+.btn:active { transform: translateY(1px); }
+.btn.primary { background: var(--accent); color: #1a1204; border-color: var(--accent); }
+.btn.primary:hover { background: #f79b58; }
+.btn.ghost { background: transparent; }
+.btn.small { padding: 6px 12px; font-size: 13px; }
+
+/* ---------- main menu ---------- */
+.menu-card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 40px;
+  width: min(460px, 100%);
+  text-align: center;
+  box-shadow: 0 20px 60px rgba(0,0,0,.5);
+}
+.title {
+  font-size: 54px;
+  letter-spacing: 6px;
+  font-weight: 800;
+}
+.title span { color: var(--accent); }
+.subtitle { color: var(--muted); margin: 6px 0 28px; }
+.menu-buttons { display: flex; flex-direction: column; gap: 12px; }
+.hint { margin-top: 22px; color: var(--muted); font-size: 13px; line-height: 1.5; }
+.hint code { background: var(--panel-2); padding: 2px 6px; border-radius: 4px; }
+.version { margin-top: 12px; color: #59636e; font-size: 12px; }
+
+.field { display: block; text-align: left; margin: 14px 0; }
+.field span { display: block; font-size: 13px; color: var(--muted); margin-bottom: 5px; }
+.field input {
+  width: 100%;
+  padding: 10px 12px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  font: inherit;
+}
+.status {
+  margin: 14px 0;
+  padding: 10px;
+  border-radius: 8px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  font-size: 13px;
+  color: var(--muted);
+  text-align: center;
+}
+.status.ok { color: var(--good); border-color: var(--good); }
+.status.err { color: var(--bad); border-color: var(--bad); }
+
+/* ---------- config screens ---------- */
+.config-wrap {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  width: min(1000px, 100%);
+  max-height: 92vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.config-head {
+  display: flex; align-items: center; gap: 14px;
+  padding: 20px 26px;
+  border-bottom: 1px solid var(--border);
+}
+.config-head h2 { font-size: 24px; }
+.pill {
+  background: var(--accent-2); color: #06121f;
+  padding: 4px 12px; border-radius: 999px; font-size: 13px; font-weight: 700;
+}
+.config-grid {
+  display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 18px;
+  padding: 22px 26px; overflow-y: auto;
+}
+.config-col { min-width: 0; }
+.config-col h3 { font-size: 15px; margin-bottom: 10px; color: var(--text); }
+.config-col small { color: var(--muted); font-weight: 400; }
+
+.option-list { display: flex; flex-direction: column; gap: 8px; }
+.option-list.horizontal { flex-direction: row; flex-wrap: wrap; }
+
+.option {
+  text-align: left;
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 12px;
+  cursor: pointer;
+  transition: border-color .12s ease, background .12s ease;
+}
+.option:hover { border-color: #46536a; }
+.option.selected { border-color: var(--accent); background: #2a2416; }
+.option .opt-name { font-weight: 700; display: flex; justify-content: space-between; align-items: center; }
+.option .opt-cost { color: var(--accent); font-size: 12px; }
+.option .opt-desc { color: var(--muted); font-size: 12px; margin-top: 3px; line-height: 1.4; }
+.option .opt-stats { display: flex; gap: 6px; margin-top: 7px; flex-wrap: wrap; }
+.stat-chip { font-size: 11px; background: var(--bg); border: 1px solid var(--border); border-radius: 4px; padding: 2px 6px; color: var(--muted); }
+
+.config-footer {
+  display: flex; align-items: center; justify-content: space-between; gap: 14px;
+  padding: 16px 26px; border-top: 1px solid var(--border);
+}
+.summary { flex: 1; text-align: center; color: var(--muted); font-size: 13px; }
+
+/* ---------- army builder ---------- */
+.army-builder { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; padding: 0 26px 22px; overflow-y: auto; }
+.budget-bar { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; font-size: 13px; color: var(--muted); }
+.budget-track { flex: 1; height: 8px; background: var(--bg); border-radius: 999px; overflow: hidden; border: 1px solid var(--border); }
+.budget-fill { height: 100%; width: 0%; background: var(--accent); transition: width .2s ease; }
+.squad-list { list-style: none; display: flex; flex-direction: column; gap: 6px; }
+.squad-list li {
+  display: flex; align-items: center; justify-content: space-between;
+  background: var(--panel-2); border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px; font-size: 14px;
+}
+.squad-list .remove { background: var(--bad); color: #fff; border: none; border-radius: 6px; width: 24px; height: 24px; cursor: pointer; font-weight: 700; }
+.squad-empty { color: var(--muted); font-size: 13px; padding: 8px; }
+
+/* ---------- game ---------- */
+#screen-game { padding: 0; background: #05070a; }
+#game-canvas { display: block; background: #10151d; }
+.hud {
+  position: absolute; top: 0; left: 0; right: 0;
+  padding: 12px 16px;
+  display: flex; gap: 22px; flex-wrap: wrap;
+  pointer-events: none;
+  font-size: 14px;
+  text-shadow: 0 1px 3px rgba(0,0,0,.9);
+}
+.hud .hud-block { background: rgba(13,17,23,.72); border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px; min-width: 150px; }
+.hud .hud-title { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; }
+.hud .bar { height: 7px; border-radius: 999px; background: #30363d; margin-top: 5px; overflow: hidden; }
+.hud .bar > i { display: block; height: 100%; }
+.hud .hp > i { background: var(--good); }
+.hud .ammo > i { background: var(--accent-2); }
+.quit-btn { position: absolute; top: 12px; right: 12px; }
+.game-message {
+  position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; flex-direction: column;
+  background: rgba(5,7,10,.82); text-align: center; gap: 18px;
+}
+.game-message.hidden { display: none; }
+.game-message h2 { font-size: 44px; letter-spacing: 2px; }
+.game-message p { color: var(--muted); }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <!-- ================= MAIN MENU ================= -->
+    <section id="screen-menu" class="screen active">
+      <div class="menu-card">
+        <h1 class="title">IRON<span>FRONT</span></h1>
+        <p class="subtitle">Top-down multiplayer arena shooter</p>
+        <div class="menu-buttons">
+          <button class="btn primary" data-mode="single">Single Player</button>
+          <button class="btn" data-mode="local">Local Multiplayer (2P)</button>
+          <button class="btn" data-mode="online">Online Multiplayer</button>
+        </div>
+        <p class="hint">Configure your <strong>Loadout</strong> and <strong>Army</strong> before deploying.</p>
+        <p class="version">v1.0</p>
+      </div>
+    </section>
+
+    <!-- ================= LOADOUT ================= -->
+    <section id="screen-loadout" class="screen">
+      <div class="config-wrap">
+        <header class="config-head">
+          <h2>Loadout</h2>
+          <span id="loadout-player-label" class="pill">Player 1</span>
+        </header>
+
+        <div class="config-grid">
+          <div class="config-col">
+            <h3>Primary Weapon</h3>
+            <div id="primary-list" class="option-list"></div>
+          </div>
+          <div class="config-col">
+            <h3>Secondary Weapon</h3>
+            <div id="secondary-list" class="option-list"></div>
+          </div>
+          <div class="config-col">
+            <h3>Armor</h3>
+            <div id="armor-list" class="option-list"></div>
+            <h3 style="margin-top:18px">Perk</h3>
+            <div id="perk-list" class="option-list"></div>
+          </div>
+        </div>
+
+        <div class="config-footer">
+          <button class="btn ghost" data-nav="menu">&larr; Back</button>
+          <div id="loadout-summary" class="summary"></div>
+          <button class="btn primary" id="loadout-next">Next: Army &rarr;</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= ARMY SETUP ================= -->
+    <section id="screen-army" class="screen">
+      <div class="config-wrap">
+        <header class="config-head">
+          <h2>Army Setup</h2>
+          <span id="army-player-label" class="pill">Player 1</span>
+        </header>
+
+        <div class="config-col">
+          <h3>Faction</h3>
+          <div id="faction-list" class="option-list horizontal"></div>
+        </div>
+
+        <div class="army-builder">
+          <div class="config-col">
+            <h3>Deploy Units <small>(drag your budget)</small></h3>
+            <div id="unit-list" class="option-list"></div>
+          </div>
+          <div class="config-col squad-col">
+            <h3>Your Squad</h3>
+            <div class="budget-bar">
+              <span>Deployment points</span>
+              <div class="budget-track"><div id="budget-fill" class="budget-fill"></div></div>
+              <span id="budget-text">0 / 20</span>
+            </div>
+            <ul id="squad-list" class="squad-list"></ul>
+          </div>
+        </div>
+
+        <div class="config-footer">
+          <button class="btn ghost" data-nav="loadout">&larr; Back</button>
+          <div id="army-summary" class="summary"></div>
+          <button class="btn primary" id="army-next">Deploy &rarr;</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= ONLINE LOBBY ================= -->
+    <section id="screen-online" class="screen">
+      <div class="menu-card">
+        <h2>Online Multiplayer</h2>
+        <label class="field">
+          <span>Server URL</span>
+          <input id="server-url" type="text" value="ws://localhost:8080" />
+        </label>
+        <label class="field">
+          <span>Room code</span>
+          <input id="room-code" type="text" value="arena-1" />
+        </label>
+        <label class="field">
+          <span>Callsign</span>
+          <input id="callsign" type="text" value="Soldier" />
+        </label>
+        <div id="online-status" class="status">Not connected</div>
+        <div class="menu-buttons">
+          <button class="btn ghost" data-nav="menu">&larr; Back</button>
+          <button class="btn primary" id="online-connect">Connect &amp; Configure</button>
+        </div>
+        <p class="hint">Start the server with <code>node game/server/server.js</code>. If no server is
+          reachable, the match falls back to offline bots automatically.</p>
+      </div>
+    </section>
+
+    <!-- ================= GAME ================= -->
+    <section id="screen-game" class="screen">
+      <canvas id="game-canvas"></canvas>
+      <div id="hud" class="hud"></div>
+      <div id="game-message" class="game-message hidden"></div>
+      <button class="btn ghost small quit-btn" data-nav="menu">Quit</button>
+    </section>
+  </div>
+
+  <!-- All game modules inlined (single-file build) -->
+  <!-- loadout.js -->
+  <script>
+/* Loadout definitions: weapons, armor, perks.
+ * Exposed on the global IF (IronFront) namespace so classic <script> tags can share state. */
+(function (root) {
+  const IF = root.IF || (root.IF = {});
+
+  // Weapon stats:
+  //  damage   - per projectile
+  //  fireRate - shots per second
+  //  spread   - radians of random cone (0 = perfectly accurate)
+  //  speed    - projectile speed (px/s)
+  //  range    - projectile lifetime in px before it dies
+  //  mag      - magazine size
+  //  reload   - reload time in seconds
+  //  pellets  - projectiles per shot (shotgun)
+  IF.WEAPONS = {
+    pistol:   { name: "M9 Pistol",     damage: 18, fireRate: 5,  spread: 0.04, speed: 620, range: 620, mag: 12, reload: 1.1, pellets: 1, desc: "Reliable sidearm. Balanced all-rounder." },
+    rifle:    { name: "AK Rifle",      damage: 14, fireRate: 9,  spread: 0.07, speed: 720, range: 780, mag: 30, reload: 1.8, pellets: 1, desc: "Automatic fire, strong sustained damage." },
+    smg:      { name: "MP5 SMG",       damage: 10, fireRate: 14, spread: 0.10, speed: 680, range: 560, mag: 32, reload: 1.5, pellets: 1, desc: "Very high rate of fire, shorter range." },
+    shotgun:  { name: "M870 Shotgun",  damage: 9,  fireRate: 1.6,spread: 0.28, speed: 640, range: 380, mag: 6,  reload: 2.2, pellets: 7, desc: "Devastating up close, spreads wide." },
+    sniper:   { name: "SVD Sniper",    damage: 75, fireRate: 1.1,spread: 0.0,  speed: 1100,range: 1400,mag: 5,  reload: 2.6, pellets: 1, desc: "One-shot punch at long range." },
+    knife:    { name: "Combat Knife",  damage: 45, fireRate: 3,  spread: 0.0,  speed: 300, range: 60,  mag: 999,reload: 0,   pellets: 1, desc: "Melee only. Infinite, but you must be close." },
+  };
+
+  IF.ARMOR = {
+    light:  { name: "Light Vest",  hp: 100, speedMul: 1.15, desc: "Fast and nimble, minimal protection." },
+    medium: { name: "Combat Vest", hp: 140, speedMul: 1.0,  desc: "Balanced protection and mobility." },
+    heavy:  { name: "Riot Armor",  hp: 200, speedMul: 0.82, desc: "Heavy plating, slower movement." },
+  };
+
+  IF.PERKS = {
+    none:     { name: "None",        desc: "No perk." },
+    regen:    { name: "Field Medic", desc: "Slowly regenerate health out of combat.", regen: 8 },
+    scavenger:{ name: "Scavenger",   desc: "Reloads are 35% faster.", reloadMul: 0.65 },
+    juggernaut:{name: "Juggernaut",  desc: "+25% maximum health.", hpMul: 1.25 },
+    marksman: { name: "Marksman",    desc: "Weapon spread reduced by 40%.", spreadMul: 0.6 },
+  };
+
+  // A fresh default loadout.
+  IF.defaultLoadout = function () {
+    return { primary: "rifle", secondary: "pistol", armor: "medium", perk: "none" };
+  };
+
+  // Resolve a loadout selection into concrete combat stats.
+  IF.resolveLoadout = function (lo) {
+    const armor = IF.ARMOR[lo.armor];
+    const perk = IF.PERKS[lo.perk] || IF.PERKS.none;
+    let maxHp = armor.hp;
+    if (perk.hpMul) maxHp = Math.round(maxHp * perk.hpMul);
+    return {
+      maxHp,
+      speedMul: armor.speedMul,
+      reloadMul: perk.reloadMul || 1,
+      spreadMul: perk.spreadMul || 1,
+      regen: perk.regen || 0,
+      primary: IF.WEAPONS[lo.primary],
+      secondary: IF.WEAPONS[lo.secondary],
+    };
+  };
+})(window);
+  </script>
+  <!-- army.js -->
+  <script>
+/* Army setup definitions: factions and deployable squad units. */
+(function (root) {
+  const IF = root.IF || (root.IF = {});
+
+  // Factions apply team-wide modifiers and a color identity.
+  IF.FACTIONS = {
+    vanguard: { name: "Vanguard",  color: "#58a6ff", damageMul: 1.0,  hpMul: 1.0,  speedMul: 1.0,  desc: "Balanced professional army." },
+    legion:   { name: "Red Legion",color: "#f85149", damageMul: 1.15, hpMul: 0.95, speedMul: 1.0,  desc: "Aggressive: hits harder, slightly fragile." },
+    sentinel: { name: "Sentinel",  color: "#3fb950", damageMul: 0.9,  hpMul: 1.25, speedMul: 0.95, desc: "Defensive: tanky and durable." },
+    phantom:  { name: "Phantom",   color: "#a371f7", damageMul: 1.0,  hpMul: 0.9,  speedMul: 1.2,  desc: "Fast strike force, low armor." },
+  };
+
+  // Deployable AI units. cost is spent from the deployment budget.
+  IF.UNITS = {
+    rifleman: { name: "Rifleman", cost: 3, hp: 90,  speed: 90,  damage: 12, fireRate: 3.5, range: 420, radius: 12, desc: "Standard infantry. Cheap and dependable." },
+    heavy:    { name: "Heavy",    cost: 6, hp: 180, speed: 62,  damage: 20, fireRate: 2.2, range: 380, radius: 15, desc: "Slow, tough, heavy hitter." },
+    scout:    { name: "Scout",    cost: 4, hp: 70,  speed: 140, damage: 9,  fireRate: 5.0, range: 340, radius: 10, desc: "Fast flanker with rapid fire." },
+    sniper:   { name: "Sniper",   cost: 5, hp: 60,  speed: 75,  damage: 55, fireRate: 0.9, range: 720, radius: 10, desc: "Long range, high damage, low fire rate." },
+    medic:    { name: "Medic",    cost: 5, hp: 100, speed: 100, damage: 6,  fireRate: 2.0, range: 300, radius: 12, heal: 14, desc: "Heals nearby friendly units over time." },
+  };
+
+  IF.ARMY_BUDGET = 20;
+
+  IF.defaultArmy = function () {
+    return { faction: "vanguard", squad: ["rifleman", "rifleman", "heavy", "sniper"] };
+  };
+
+  IF.squadCost = function (squad) {
+    return squad.reduce((sum, key) => sum + (IF.UNITS[key] ? IF.UNITS[key].cost : 0), 0);
+  };
+})(window);
+  </script>
+  <!-- input.js -->
+  <script>
+/* Keyboard + mouse input tracking. */
+(function (root) {
+  const IF = root.IF || (root.IF = {});
+
+  const keys = Object.create(null);
+  const mouse = { x: 0, y: 0, down: false };
+
+  function normalize(code) { return code; }
+
+  window.addEventListener("keydown", (e) => {
+    keys[e.code] = true;
+    // Prevent the page from scrolling on movement/fire keys while playing.
+    if (["ArrowUp","ArrowDown","ArrowLeft","ArrowRight","Space"].includes(e.code) &&
+        IF.state && IF.state.screen === "game") {
+      e.preventDefault();
+    }
+  });
+  window.addEventListener("keyup", (e) => { keys[e.code] = false; });
+  window.addEventListener("blur", () => { for (const k in keys) keys[k] = false; mouse.down = false; });
+
+  IF.bindMouse = function (canvas) {
+    canvas.addEventListener("mousemove", (e) => {
+      const r = canvas.getBoundingClientRect();
+      mouse.x = e.clientX - r.left;
+      mouse.y = e.clientY - r.top;
+    });
+    canvas.addEventListener("mousedown", () => { mouse.down = true; });
+    window.addEventListener("mouseup", () => { mouse.down = false; });
+    canvas.addEventListener("contextmenu", (e) => e.preventDefault());
+  };
+
+  IF.input = {
+    isDown: (code) => !!keys[normalize(code)],
+    anyDown: (codes) => codes.some((c) => !!keys[c]),
+    mouse,
+  };
+})(window);
+  </script>
+  <!-- entities.js -->
+  <script>
+/* Game entities: Bullet, Soldier (AI squad unit), Player. */
+(function (root) {
+  const IF = root.IF || (root.IF = {});
+
+  const TAU = Math.PI * 2;
+  function dist2(ax, ay, bx, by) { const dx = ax - bx, dy = ay - by; return dx * dx + dy * dy; }
+  function clamp(v, lo, hi) { return v < lo ? lo : v > hi ? hi : v; }
+  IF.util = { dist2, clamp, TAU };
+
+  // ---------------- Bullet ----------------
+  class Bullet {
+    constructor(x, y, angle, speed, damage, range, team, owner, color) {
+      this.x = x; this.y = y;
+      this.vx = Math.cos(angle) * speed;
+      this.vy = Math.sin(angle) * speed;
+      this.damage = damage;
+      this.team = team;
+      this.owner = owner;
+      this.color = color || "#ffd479";
+      this.life = range / speed; // seconds until it expires
+      this.alive = true;
+      this.radius = 3;
+    }
+    update(dt, world) {
+      this.x += this.vx * dt;
+      this.y += this.vy * dt;
+      this.life -= dt;
+      if (this.life <= 0) { this.alive = false; return; }
+      if (this.x < 0 || this.y < 0 || this.x > world.w || this.y > world.h) { this.alive = false; return; }
+      // walls
+      for (const wall of world.walls) {
+        if (this.x > wall.x && this.x < wall.x + wall.w && this.y > wall.y && this.y < wall.y + wall.h) {
+          this.alive = false; return;
+        }
+      }
+    }
+    draw(ctx) {
+      ctx.fillStyle = this.color;
+      ctx.beginPath();
+      ctx.arc(this.x, this.y, this.radius, 0, TAU);
+      ctx.fill();
+    }
+  }
+
+  // ---------------- Combatant base ----------------
+  class Combatant {
+    constructor(x, y, team, opts) {
+      this.x = x; this.y = y;
+      this.team = team;
+      this.angle = 0;
+      this.radius = opts.radius || 13;
+      this.maxHp = opts.hp;
+      this.hp = opts.hp;
+      this.speed = opts.speed;
+      this.color = opts.color;
+      this.alive = true;
+      this.cooldown = 0;
+    }
+    takeDamage(d) {
+      if (!this.alive) return;
+      this.hp -= d;
+      if (this.hp <= 0) { this.hp = 0; this.alive = false; }
+    }
+    collideWalls(world, nx, ny) {
+      // Axis-separated resolution against rectangular walls.
+      let x = nx, y = ny, r = this.radius;
+      for (const wall of world.walls) {
+        const cx = clamp(x, wall.x, wall.x + wall.w);
+        const cy = clamp(y, wall.y, wall.y + wall.h);
+        const dx = x - cx, dy = y - cy;
+        const d2 = dx * dx + dy * dy;
+        if (d2 < r * r && d2 > 0.0001) {
+          const d = Math.sqrt(d2);
+          x = cx + (dx / d) * r;
+          y = cy + (dy / d) * r;
+        }
+      }
+      x = clamp(x, r, world.w - r);
+      y = clamp(y, r, world.h - r);
+      return [x, y];
+    }
+  }
+
+  // ---------------- AI Soldier ----------------
+  class Soldier extends Combatant {
+    constructor(x, y, team, def, faction, color) {
+      const hp = Math.round(def.hp * faction.hpMul);
+      super(x, y, team, { hp, speed: def.speed * faction.speedMul, radius: def.radius, color });
+      this.def = def;
+      this.faction = faction;
+      this.damage = def.damage * faction.damageMul;
+      this.range = def.range;
+      this.fireInterval = 1 / def.fireRate;
+      this.heal = def.heal || 0;
+      this.healTimer = 0;
+      this.wander = Math.random() * TAU;
+      this.wanderTimer = 0;
+    }
+    update(dt, world) {
+      if (!this.alive) return;
+      this.cooldown -= dt;
+
+      // Medic: periodically heal nearby friendlies.
+      if (this.heal) {
+        this.healTimer -= dt;
+        if (this.healTimer <= 0) {
+          this.healTimer = 1;
+          for (const f of world.combatants()) {
+            if (f.team === this.team && f.alive && f !== this && dist2(this.x, this.y, f.x, f.y) < 140 * 140) {
+              f.hp = Math.min(f.maxHp, f.hp + this.heal);
+            }
+          }
+        }
+      }
+
+      // Target the nearest living enemy.
+      let target = null, best = Infinity;
+      for (const e of world.combatants()) {
+        if (e.team === this.team || !e.alive) continue;
+        const d = dist2(this.x, this.y, e.x, e.y);
+        if (d < best) { best = d; target = e; }
+      }
+
+      let mvx = 0, mvy = 0;
+      if (target) {
+        const d = Math.sqrt(best);
+        this.angle = Math.atan2(target.y - this.y, target.x - this.x);
+        const ideal = this.range * 0.7;
+        if (d > ideal + 20) { mvx = Math.cos(this.angle); mvy = Math.sin(this.angle); }
+        else if (d < ideal - 60) { mvx = -Math.cos(this.angle); mvy = -Math.sin(this.angle); }
+        else {
+          // strafe
+          mvx = Math.cos(this.angle + Math.PI / 2);
+          mvy = Math.sin(this.angle + Math.PI / 2);
+        }
+        if (d < this.range && this.cooldown <= 0) {
+          this.cooldown = this.fireInterval;
+          const spread = (Math.random() - 0.5) * 0.12;
+          world.spawnBullet(new Bullet(
+            this.x + Math.cos(this.angle) * (this.radius + 4),
+            this.y + Math.sin(this.angle) * (this.radius + 4),
+            this.angle + spread, 640, this.damage, this.range, this.team, this,
+            this.faction.color));
+        }
+      } else {
+        // No enemies: wander a little.
+        this.wanderTimer -= dt;
+        if (this.wanderTimer <= 0) { this.wander = Math.random() * TAU; this.wanderTimer = 1.5 + Math.random(); }
+        mvx = Math.cos(this.wander) * 0.4; mvy = Math.sin(this.wander) * 0.4;
+      }
+
+      const len = Math.hypot(mvx, mvy) || 1;
+      const nx = this.x + (mvx / len) * this.speed * dt;
+      const ny = this.y + (mvy / len) * this.speed * dt;
+      [this.x, this.y] = this.collideWalls(world, nx, ny);
+    }
+    draw(ctx) {
+      if (!this.alive) return;
+      drawUnit(ctx, this, false);
+    }
+  }
+
+  // ---------------- Player ----------------
+  class Player extends Combatant {
+    constructor(x, y, team, loadout, army, color, scheme, name) {
+      const res = IF.resolveLoadout(loadout);
+      const faction = IF.FACTIONS[army.faction];
+      const hp = Math.round(res.maxHp * faction.hpMul);
+      super(x, y, team, { hp, speed: 180 * res.speedMul * faction.speedMul, radius: 14, color });
+      this.name = name || "Player";
+      this.res = res;
+      this.faction = faction;
+      this.scheme = scheme;         // control scheme (see input handling in game.js)
+      this.weapons = [res.primary, res.secondary];
+      this.weaponIndex = 0;
+      this.ammo = this.weapon.mag;
+      this.reloading = 0;
+      this.regen = res.regen;
+      this.outOfCombat = 0;
+      this.kills = 0;
+      this.respawnTimer = 0;
+    }
+    get weapon() { return this.weapons[this.weaponIndex]; }
+    switchWeapon() {
+      this.weaponIndex = (this.weaponIndex + 1) % this.weapons.length;
+      this.ammo = this.weapon.mag;
+      this.reloading = 0;
+    }
+    startReload() {
+      if (this.reloading > 0 || this.ammo === this.weapon.mag) return;
+      this.reloading = this.weapon.reload * this.res.reloadMul;
+    }
+    tryShoot(world) {
+      if (!this.alive || this.reloading > 0 || this.cooldown > 0) return;
+      if (this.ammo <= 0) { this.startReload(); return; }
+      this.cooldown = 1 / this.weapon.fireRate;
+      this.ammo--;
+      this.outOfCombat = 0;
+      const w = this.weapon;
+      const spread = w.spread * this.res.spreadMul;
+      for (let p = 0; p < w.pellets; p++) {
+        const a = this.angle + (Math.random() - 0.5) * spread * 2;
+        world.spawnBullet(new Bullet(
+          this.x + Math.cos(this.angle) * (this.radius + 5),
+          this.y + Math.sin(this.angle) * (this.radius + 5),
+          a, w.speed, w.damage * this.faction.damageMul, w.range, this.team, this, "#ffe08a"));
+      }
+      if (this.ammo <= 0) this.startReload();
+    }
+    update(dt, world, move) {
+      if (!this.alive) return;
+      this.cooldown -= dt;
+      this.outOfCombat += dt;
+      if (this.reloading > 0) {
+        this.reloading -= dt;
+        if (this.reloading <= 0) { this.reloading = 0; this.ammo = this.weapon.mag; }
+      }
+      // Passive regen perk.
+      if (this.regen && this.outOfCombat > 3 && this.hp < this.maxHp) {
+        this.hp = Math.min(this.maxHp, this.hp + this.regen * dt);
+      }
+      const len = Math.hypot(move.x, move.y);
+      if (len > 0.001) {
+        const nx = this.x + (move.x / len) * this.speed * dt;
+        const ny = this.y + (move.y / len) * this.speed * dt;
+        [this.x, this.y] = this.collideWalls(world, nx, ny);
+      }
+    }
+    takeDamage(d) { super.takeDamage(d); this.outOfCombat = 0; }
+    draw(ctx) {
+      if (!this.alive) return;
+      drawUnit(ctx, this, true);
+      // name tag
+      ctx.fillStyle = "#e6edf3";
+      ctx.font = "11px system-ui";
+      ctx.textAlign = "center";
+      ctx.fillText(this.name, this.x, this.y - this.radius - 8);
+    }
+  }
+
+  // Shared unit renderer: body, direction barrel, and a small health ring.
+  function drawUnit(ctx, u, isPlayer) {
+    ctx.save();
+    // health ring
+    const pct = u.hp / u.maxHp;
+    ctx.beginPath();
+    ctx.arc(u.x, u.y, u.radius + 4, -Math.PI / 2, -Math.PI / 2 + TAU * pct);
+    ctx.strokeStyle = pct > 0.5 ? "#3fb950" : pct > 0.25 ? "#d29922" : "#f85149";
+    ctx.lineWidth = 3;
+    ctx.stroke();
+
+    // body
+    ctx.beginPath();
+    ctx.arc(u.x, u.y, u.radius, 0, TAU);
+    ctx.fillStyle = u.color;
+    ctx.fill();
+    ctx.lineWidth = isPlayer ? 3 : 1.5;
+    ctx.strokeStyle = isPlayer ? "#ffffff" : "rgba(0,0,0,.5)";
+    ctx.stroke();
+
+    // barrel / facing
+    ctx.beginPath();
+    ctx.moveTo(u.x, u.y);
+    ctx.lineTo(u.x + Math.cos(u.angle) * (u.radius + 8), u.y + Math.sin(u.angle) * (u.radius + 8));
+    ctx.strokeStyle = "#0d1117";
+    ctx.lineWidth = 4;
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  IF.Bullet = Bullet;
+  IF.Soldier = Soldier;
+  IF.Player = Player;
+})(window);
+  </script>
+  <!-- net.js -->
+  <script>
+/* Online multiplayer client — a lightweight relay over WebSocket.
+ * Each client is authoritative over its own player and broadcasts state + shots.
+ * Remote players are rendered from network state; their bullets are spawned locally.
+ * If the server is unreachable, main.js falls back to offline bots. */
+(function (root) {
+  const IF = root.IF || (root.IF = {});
+
+  const net = {
+    active: false,
+    ws: null,
+    id: null,
+    team: 0,
+    room: null,
+    name: "Soldier",
+    peers: Object.create(null),   // peerId -> remote Player entity
+    _syncAccum: 0,
+    _pending: null,
+  };
+
+  // Connect and join a room. Resolves with { id, team } on success.
+  net.connect = function (url, room, name) {
+    return new Promise((resolve, reject) => {
+      let ws;
+      try { ws = new WebSocket(url); } catch (e) { return reject(e); }
+      const timeout = setTimeout(() => { try { ws.close(); } catch (_) {} reject(new Error("timeout")); }, 4000);
+
+      ws.onopen = () => { ws.send(JSON.stringify({ t: "join", room, name })); };
+      ws.onerror = () => { clearTimeout(timeout); reject(new Error("connection error")); };
+      ws.onclose = () => { if (!net.active) { clearTimeout(timeout); reject(new Error("closed")); } };
+      ws.onmessage = (ev) => {
+        let msg; try { msg = JSON.parse(ev.data); } catch (_) { return; }
+        if (msg.t === "welcome") {
+          clearTimeout(timeout);
+          net.ws = ws; net.id = msg.id; net.team = msg.team; net.room = room; net.name = name;
+          resolve({ id: msg.id, team: msg.team });
+        }
+      };
+    });
+  };
+
+  // Wire the connection into a running game instance.
+  net.begin = function (G, config) {
+    if (!net.ws) return; // no server: offline fallback already chosen upstream
+    net.active = true;
+    const world = G.world;
+
+    net.ws.onmessage = (ev) => {
+      let msg; try { msg = JSON.parse(ev.data); } catch (_) { return; }
+      switch (msg.t) {
+        case "state": {
+          if (msg.id === net.id) return;
+          let peer = net.peers[msg.id];
+          if (!peer) {
+            peer = new IF.Player(msg.x, msg.y, msg.team,
+              IF.defaultLoadout(), { faction: msg.faction || "legion", squad: [] },
+              (IF.FACTIONS[msg.faction] || IF.FACTIONS.legion).color, null, msg.name || "Enemy");
+            peer.controlledLocally = false;
+            net.peers[msg.id] = peer;
+            G.players.push(peer);
+          }
+          peer.x = msg.x; peer.y = msg.y; peer.angle = msg.a;
+          peer.hp = msg.hp; peer.maxHp = msg.mhp; peer.alive = msg.alive;
+          peer.name = msg.name || peer.name;
+          break;
+        }
+        case "shot": {
+          if (msg.id === net.id) return;
+          world.spawnBullet(new IF.Bullet(msg.x, msg.y, msg.a, msg.speed, msg.dmg, msg.range, msg.team, null, "#ff9db1"));
+          break;
+        }
+        case "leave": {
+          const peer = net.peers[msg.id];
+          if (peer) { peer.alive = false; delete net.peers[msg.id]; }
+          break;
+        }
+      }
+    };
+
+    // Broadcast our shots by wrapping tryShoot.
+    const lp = G.localPlayer;
+    if (lp) {
+      const origShoot = lp.tryShoot.bind(lp);
+      lp.tryShoot = function (w) {
+        const before = this.ammo, cd = this.cooldown, rl = this.reloading;
+        origShoot(w);
+        // fired if a shot actually went out this call
+        if (this.ammo < before || (before === this.weapon.mag && this.cooldown !== cd && rl <= 0)) {
+          net.send({ t: "shot", id: net.id, team: this.team,
+            x: this.x + Math.cos(this.angle) * (this.radius + 5),
+            y: this.y + Math.sin(this.angle) * (this.radius + 5),
+            a: this.angle, speed: this.weapon.speed,
+            dmg: this.weapon.damage * this.faction.damageMul, range: this.weapon.range });
+        }
+      };
+    }
+  };
+
+  net.sync = function (lp) {
+    if (!net.active || !net.ws || !lp) return;
+    net._syncAccum += 1;
+    if (net._syncAccum < 2) return; // ~ every other frame
+    net._syncAccum = 0;
+    net.send({ t: "state", id: net.id, team: lp.team, name: lp.name,
+      faction: factionKeyOf(lp), x: lp.x, y: lp.y, a: lp.angle,
+      hp: lp.hp, mhp: lp.maxHp, alive: lp.alive });
+  };
+
+  function factionKeyOf(p) {
+    for (const k in IF.FACTIONS) if (IF.FACTIONS[k] === p.faction) return k;
+    return "vanguard";
+  }
+
+  net.send = function (obj) {
+    if (net.ws && net.ws.readyState === 1) net.ws.send(JSON.stringify(obj));
+  };
+
+  net.end = function () {
+    net.active = false;
+    try { if (net.ws) { net.send({ t: "leave", id: net.id }); net.ws.close(); } } catch (_) {}
+    net.ws = null; net.peers = Object.create(null);
+  };
+
+  IF.net = net;
+})(window);
+  </script>
+  <!-- game.js -->
+  <script>
+/* Core game engine: world, spawning, main loop, HUD, win/lose. */
+(function (root) {
+  const IF = root.IF || (root.IF = {});
+  const { clamp } = IF.util;
+
+  const G = {
+    canvas: null, ctx: null,
+    raf: 0, last: 0, running: false,
+    world: null, config: null,
+    localPlayer: null, players: [], soldiers: [], bullets: [],
+    over: false,
+  };
+
+  function buildWalls(w, h) {
+    // A handful of rectangular cover blocks, laid out symmetrically.
+    const b = [];
+    const bw = 90, bh = 26;
+    b.push({ x: w * 0.5 - 13, y: h * 0.2, w: 26, h: h * 0.6 });        // central divider
+    b.push({ x: w * 0.25 - bw / 2, y: h * 0.32, w: bw, h: bh });
+    b.push({ x: w * 0.25 - bw / 2, y: h * 0.62, w: bw, h: bh });
+    b.push({ x: w * 0.75 - bw / 2, y: h * 0.32, w: bw, h: bh });
+    b.push({ x: w * 0.75 - bw / 2, y: h * 0.62, w: bw, h: bh });
+    b.push({ x: w * 0.5 - bh / 2, y: h * 0.06, w: bh, h: bw });
+    b.push({ x: w * 0.5 - bh / 2, y: h * 0.94 - bw, w: bh, h: bw });
+    return b;
+  }
+
+  function makeWorld(w, h) {
+    return {
+      w, h,
+      walls: buildWalls(w, h),
+      spawnBullet: (b) => G.bullets.push(b),
+      combatants: () => G.combatants,
+    };
+  }
+
+  function teamColor(teamIndex, factionKey) {
+    return IF.FACTIONS[factionKey] ? IF.FACTIONS[factionKey].color : (teamIndex === 0 ? "#58a6ff" : "#f85149");
+  }
+
+  function spawnArmy(team, army, side, world) {
+    const faction = IF.FACTIONS[army.faction];
+    const color = faction.color;
+    const baseX = side === 0 ? world.w * 0.12 : world.w * 0.88;
+    army.squad.forEach((key, i) => {
+      const def = IF.UNITS[key];
+      if (!def) return;
+      const row = i % 5, col = Math.floor(i / 5);
+      const x = baseX + (side === 0 ? -1 : 1) * col * 34;
+      const y = world.h * 0.3 + row * (world.h * 0.4 / 5);
+      const s = new IF.Soldier(clamp(x, 30, world.w - 30), y, team, def, faction, color);
+      s.side = side;
+      G.soldiers.push(s);
+    });
+  }
+
+  function spawnPlayer(team, cfg, side, world) {
+    const faction = IF.FACTIONS[cfg.army.faction];
+    const x = side === 0 ? world.w * 0.08 : world.w * 0.92;
+    const y = world.h * 0.5;
+    const p = new IF.Player(x, y, team, cfg.loadout, cfg.army, faction.color, cfg.scheme, cfg.name);
+    p.side = side;
+    G.players.push(p);
+    return p;
+  }
+
+  function rebuildCombatants() {
+    G.combatants = [].concat(G.players, G.soldiers);
+    G.world.combatants = () => G.combatants;
+  }
+
+  // ---------------- input schemes ----------------
+  function readMove(scheme) {
+    const i = IF.input;
+    const m = { x: 0, y: 0 };
+    if (scheme === "wasd") {
+      if (i.isDown("KeyA")) m.x -= 1;
+      if (i.isDown("KeyD")) m.x += 1;
+      if (i.isDown("KeyW")) m.y -= 1;
+      if (i.isDown("KeyS")) m.y += 1;
+    } else if (scheme === "arrows") {
+      if (i.isDown("ArrowLeft")) m.x -= 1;
+      if (i.isDown("ArrowRight")) m.x += 1;
+      if (i.isDown("ArrowUp")) m.y -= 1;
+      if (i.isDown("ArrowDown")) m.y += 1;
+    }
+    return m;
+  }
+
+  function aimAndFire(p, world) {
+    const i = IF.input;
+    if (p.scheme === "wasd") {
+      // Mouse aim, mouse or space to fire.
+      p.angle = Math.atan2(i.mouse.y - p.y, i.mouse.x - p.x);
+      if (i.mouse.down || i.isDown("Space")) p.tryShoot(world);
+      if (i.isDown("KeyR")) p.startReload();
+      handleSwitch(p, i.isDown("KeyQ"), "q");
+    } else if (p.scheme === "arrows") {
+      // Auto-aim nearest enemy; fire with Enter / Numpad0.
+      let best = Infinity, tgt = null;
+      for (const e of G.combatants) {
+        if (e.team === p.team || !e.alive) continue;
+        const d = IF.util.dist2(p.x, p.y, e.x, e.y);
+        if (d < best) { best = d; tgt = e; }
+      }
+      if (tgt) p.angle = Math.atan2(tgt.y - p.y, tgt.x - p.x);
+      if (i.isDown("Enter") || i.isDown("Numpad0") || i.isDown("ShiftRight")) p.tryShoot(world);
+      if (i.isDown("Slash") || i.isDown("NumpadDecimal")) p.startReload();
+      handleSwitch(p, i.isDown("ControlRight") || i.isDown("Numpad1"), "arr");
+    }
+  }
+  const switchLatch = {};
+  function handleSwitch(p, pressed, id) {
+    if (pressed && !switchLatch[id]) { p.switchWeapon(); switchLatch[id] = true; }
+    else if (!pressed) switchLatch[id] = false;
+  }
+
+  // ---------------- main loop ----------------
+  function step(now) {
+    if (!G.running) return;
+    let dt = (now - G.last) / 1000;
+    G.last = now;
+    if (dt > 0.05) dt = 0.05; // clamp big frame gaps
+    update(dt);
+    render();
+    G.raf = requestAnimationFrame(step);
+  }
+
+  function update(dt) {
+    if (G.over) return;
+    const world = G.world;
+
+    // Players
+    for (const p of G.players) {
+      if (p.controlledLocally !== false && p.scheme) {
+        const move = readMove(p.scheme);
+        p.update(dt, world, move);
+        aimAndFire(p, world);
+      } else {
+        // remote-driven player: position set by net; just tick timers minimally
+        p.update(dt, world, { x: 0, y: 0 });
+      }
+    }
+
+    // Soldiers
+    for (const s of G.soldiers) s.update(dt, world);
+
+    // Bullets + collisions
+    for (const b of G.bullets) {
+      b.update(dt, world);
+      if (!b.alive) continue;
+      for (const c of G.combatants) {
+        if (!c.alive || c.team === b.team) continue;
+        if (IF.util.dist2(b.x, b.y, c.x, c.y) < (c.radius + b.radius) * (c.radius + b.radius)) {
+          c.takeDamage(b.damage);
+          if (!c.alive && b.owner && b.owner.kills !== undefined) b.owner.kills++;
+          b.alive = false;
+          break;
+        }
+      }
+    }
+    G.bullets = G.bullets.filter((b) => b.alive);
+    G.soldiers = G.soldiers.filter((s) => s.alive);
+    rebuildCombatants();
+
+    if (IF.net && IF.net.active) IF.net.sync(G.localPlayer);
+
+    checkWinLose();
+  }
+
+  function checkWinLose() {
+    // Determine which teams still have a living player.
+    const teamsAlive = {};
+    for (const p of G.players) if (p.alive) teamsAlive[p.team] = true;
+
+    const myTeam = G.localPlayer ? G.localPlayer.team : 0;
+    const myAlive = G.localPlayer ? G.localPlayer.alive : false;
+
+    // Enemy fully eliminated? (no living enemy players AND no living enemy soldiers)
+    let enemyLeft = 0;
+    for (const c of G.combatants) if (c.team !== myTeam && c.alive) enemyLeft++;
+
+    if (!myAlive) return endGame(false, "You were eliminated");
+    if (enemyLeft === 0) return endGame(true, "Enemy forces neutralized");
+  }
+
+  function endGame(win, reason) {
+    if (G.over) return;
+    G.over = true;
+    const el = document.getElementById("game-message");
+    el.innerHTML = `<h2 style="color:${win ? "#3fb950" : "#f85149"}">${win ? "VICTORY" : "DEFEAT"}</h2>` +
+      `<p>${reason}</p>` +
+      `<p>Kills: ${G.localPlayer ? G.localPlayer.kills : 0}</p>` +
+      `<div style="display:flex;gap:12px;margin-top:8px">` +
+      `<button class="btn" id="msg-menu">Main Menu</button></div>`;
+    el.classList.remove("hidden");
+    document.getElementById("msg-menu").onclick = () => { IF.stopGame(); IF.showScreen("menu"); };
+  }
+
+  // ---------------- render ----------------
+  function render() {
+    const ctx = G.ctx, world = G.world;
+    ctx.clearRect(0, 0, G.canvas.width, G.canvas.height);
+
+    // floor grid
+    ctx.fillStyle = "#10151d";
+    ctx.fillRect(0, 0, world.w, world.h);
+    ctx.strokeStyle = "rgba(255,255,255,.03)";
+    ctx.lineWidth = 1;
+    for (let x = 0; x < world.w; x += 48) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, world.h); ctx.stroke(); }
+    for (let y = 0; y < world.h; y += 48) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(world.w, y); ctx.stroke(); }
+
+    // walls
+    for (const wl of world.walls) {
+      ctx.fillStyle = "#222c39";
+      ctx.fillRect(wl.x, wl.y, wl.w, wl.h);
+      ctx.strokeStyle = "#3a4756";
+      ctx.strokeRect(wl.x, wl.y, wl.w, wl.h);
+    }
+
+    for (const s of G.soldiers) s.draw(ctx);
+    for (const p of G.players) p.draw(ctx);
+    for (const b of G.bullets) b.draw(ctx);
+
+    drawHud();
+  }
+
+  function drawHud() {
+    const p = G.localPlayer;
+    const hud = document.getElementById("hud");
+    if (!p) { hud.innerHTML = ""; return; }
+    const hpPct = Math.max(0, p.hp / p.maxHp) * 100;
+    const ammoPct = (p.reloading > 0 ? 0 : p.ammo / p.weapon.mag) * 100;
+
+    // count forces
+    const myTeam = p.team;
+    let allies = 0, enemies = 0;
+    for (const c of G.combatants) { if (!c.alive) continue; if (c.team === myTeam) allies++; else enemies++; }
+
+    hud.innerHTML =
+      `<div class="hud-block">
+        <div class="hud-title">${p.name} — ${p.faction.name}</div>
+        <div class="bar hp"><i style="width:${hpPct}%"></i></div>
+        <div style="margin-top:6px">${p.weapon.name}</div>
+        <div class="bar ammo"><i style="width:${ammoPct}%"></i></div>
+        <div style="font-size:12px;margin-top:4px;color:#8b949e">${p.reloading > 0 ? "Reloading…" : p.ammo + " / " + p.weapon.mag}</div>
+      </div>` +
+      `<div class="hud-block">
+        <div class="hud-title">Forces</div>
+        <div>Allies: ${allies}</div>
+        <div>Enemies: ${enemies}</div>
+        <div style="margin-top:4px">Kills: ${p.kills}</div>
+      </div>` +
+      `<div class="hud-block">
+        <div class="hud-title">Controls</div>
+        <div style="font-size:12px;color:#8b949e">${p.scheme === "wasd"
+          ? "WASD move · Mouse aim · Click/Space fire · R reload · Q swap"
+          : "Arrows move · Auto-aim · Enter fire · / reload"}</div>
+      </div>`;
+  }
+
+  // ---------------- public API ----------------
+  IF.startGame = function (config) {
+    G.canvas = document.getElementById("game-canvas");
+    G.ctx = G.canvas.getContext("2d");
+    resize();
+    window.addEventListener("resize", resize);
+    IF.bindMouse(G.canvas);
+
+    G.config = config;
+    G.players = []; G.soldiers = []; G.bullets = []; G.over = false;
+    G.world = makeWorld(G.canvas.width, G.canvas.height);
+    document.getElementById("game-message").classList.add("hidden");
+
+    // Spawn per configured players.
+    config.players.forEach((cfg, idx) => {
+      const p = spawnPlayer(cfg.team, cfg, cfg.side, G.world);
+      p.controlledLocally = cfg.controlledLocally !== false;
+      if (cfg.local) G.localPlayer = p;
+      spawnArmy(cfg.team, cfg.army, cfg.side, G.world);
+    });
+    if (!G.localPlayer) G.localPlayer = G.players[0];
+
+    // Extra enemy AI army (single player, or an online garrison). Always spawn it
+    // on the team OPPOSITE the local player so team-1 players get real opponents.
+    if (config.enemyArmy) {
+      const enemyTeam = G.localPlayer ? (1 - G.localPlayer.team) : 1;
+      spawnArmy(enemyTeam, config.enemyArmy, enemyTeam % 2, G.world);
+    }
+
+    rebuildCombatants();
+
+    if (config.mode === "online" && IF.net) IF.net.begin(G, config);
+
+    G.running = true;
+    G.last = performance.now();
+    G.raf = requestAnimationFrame(step);
+  };
+
+  IF.stopGame = function () {
+    G.running = false;
+    cancelAnimationFrame(G.raf);
+    window.removeEventListener("resize", resize);
+    if (IF.net && IF.net.active) IF.net.end();
+  };
+
+  IF.gameRef = G; // exposed for net.js
+
+  function resize() {
+    if (!G.canvas) return;
+    G.canvas.width = window.innerWidth;
+    G.canvas.height = window.innerHeight;
+    if (G.world) { G.world.w = G.canvas.width; G.world.h = G.canvas.height; }
+  }
+})(window);
+  </script>
+  <!-- main.js -->
+  <script>
+/* Menu flow, screen management, loadout & army UI, match configuration. */
+(function (root) {
+  const IF = root.IF || (root.IF = {});
+
+  IF.state = {
+    screen: "menu",
+    mode: "single",
+    players: [],        // configs being built
+    configuring: 0,     // index of the player currently being configured
+    toConfigure: 1,     // how many players need configuring for this mode
+    online: null,       // { id, team } once connected
+  };
+
+  const $ = (sel) => document.querySelector(sel);
+  const $$ = (sel) => Array.from(document.querySelectorAll(sel));
+
+  IF.showScreen = function (name) {
+    IF.state.screen = name;
+    $$(".screen").forEach((s) => s.classList.remove("active"));
+    const el = document.getElementById("screen-" + name);
+    if (el) el.classList.add("active");
+  };
+
+  function freshPlayerConfig(i) {
+    return {
+      name: i === 0 ? "Player 1" : "Player 2",
+      loadout: IF.defaultLoadout(),
+      army: IF.defaultArmy(),
+      scheme: i === 0 ? "wasd" : "arrows",
+    };
+  }
+
+  // ---------------- menu ----------------
+  function initMenu() {
+    $$("#screen-menu [data-mode]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const mode = btn.dataset.mode;
+        IF.state.mode = mode;
+        if (mode === "online") { IF.showScreen("online"); return; }
+        IF.state.toConfigure = mode === "local" ? 2 : 1;
+        IF.state.players = [];
+        for (let i = 0; i < IF.state.toConfigure; i++) IF.state.players.push(freshPlayerConfig(i));
+        IF.state.configuring = 0;
+        openLoadout();
+      });
+    });
+
+    // generic back / nav buttons
+    $$("[data-nav]").forEach((btn) => btn.addEventListener("click", () => {
+      const target = btn.dataset.nav;
+      if (target === "menu") { IF.stopGame && IF.stopGame(); }
+      IF.showScreen(target);
+    }));
+  }
+
+  // ---------------- loadout ----------------
+  function openLoadout() {
+    const cfg = IF.state.players[IF.state.configuring];
+    $("#loadout-player-label").textContent = cfg.name;
+    renderWeaponList("#primary-list", cfg, "primary");
+    renderWeaponList("#secondary-list", cfg, "secondary");
+    renderArmorList(cfg);
+    renderPerkList(cfg);
+    updateLoadoutSummary(cfg);
+    IF.showScreen("loadout");
+  }
+
+  function optionEl(selected, html) {
+    const div = document.createElement("div");
+    div.className = "option" + (selected ? " selected" : "");
+    div.innerHTML = html;
+    return div;
+  }
+
+  function renderWeaponList(sel, cfg, slot) {
+    const list = $(sel); list.innerHTML = "";
+    Object.entries(IF.WEAPONS).forEach(([key, w]) => {
+      const el = optionEl(cfg.loadout[slot] === key,
+        `<div class="opt-name">${w.name}</div>
+         <div class="opt-desc">${w.desc}</div>
+         <div class="opt-stats">
+           <span class="stat-chip">DMG ${w.damage}</span>
+           <span class="stat-chip">ROF ${w.fireRate}/s</span>
+           <span class="stat-chip">MAG ${w.mag}</span>
+           ${w.pellets > 1 ? `<span class="stat-chip">x${w.pellets}</span>` : ""}
+         </div>`);
+      el.addEventListener("click", () => {
+        cfg.loadout[slot] = key;
+        renderWeaponList(sel, cfg, slot);
+        updateLoadoutSummary(cfg);
+      });
+      list.appendChild(el);
+    });
+  }
+
+  function renderArmorList(cfg) {
+    const list = $("#armor-list"); list.innerHTML = "";
+    Object.entries(IF.ARMOR).forEach(([key, a]) => {
+      const el = optionEl(cfg.loadout.armor === key,
+        `<div class="opt-name">${a.name}</div>
+         <div class="opt-desc">${a.desc}</div>
+         <div class="opt-stats"><span class="stat-chip">HP ${a.hp}</span>
+           <span class="stat-chip">SPD x${a.speedMul}</span></div>`);
+      el.addEventListener("click", () => { cfg.loadout.armor = key; renderArmorList(cfg); updateLoadoutSummary(cfg); });
+      list.appendChild(el);
+    });
+  }
+
+  function renderPerkList(cfg) {
+    const list = $("#perk-list"); list.innerHTML = "";
+    Object.entries(IF.PERKS).forEach(([key, p]) => {
+      const el = optionEl(cfg.loadout.perk === key,
+        `<div class="opt-name">${p.name}</div><div class="opt-desc">${p.desc}</div>`);
+      el.addEventListener("click", () => { cfg.loadout.perk = key; renderPerkList(cfg); updateLoadoutSummary(cfg); });
+      list.appendChild(el);
+    });
+  }
+
+  function updateLoadoutSummary(cfg) {
+    const r = IF.resolveLoadout(cfg.loadout);
+    $("#loadout-summary").innerHTML =
+      `<strong>${IF.WEAPONS[cfg.loadout.primary].name}</strong> + ${IF.WEAPONS[cfg.loadout.secondary].name}
+       · ${r.maxHp} HP · ${IF.PERKS[cfg.loadout.perk].name}`;
+  }
+
+  // ---------------- army ----------------
+  function openArmy() {
+    const cfg = IF.state.players[IF.state.configuring];
+    $("#army-player-label").textContent = cfg.name;
+    renderFactionList(cfg);
+    renderUnitList(cfg);
+    renderSquad(cfg);
+    IF.showScreen("army");
+  }
+
+  function renderFactionList(cfg) {
+    const list = $("#faction-list"); list.innerHTML = "";
+    Object.entries(IF.FACTIONS).forEach(([key, f]) => {
+      const el = optionEl(cfg.army.faction === key,
+        `<div class="opt-name" style="color:${f.color}">${f.name}</div>
+         <div class="opt-desc">${f.desc}</div>`);
+      el.style.flex = "1 1 180px";
+      el.addEventListener("click", () => { cfg.army.faction = key; renderFactionList(cfg); });
+      list.appendChild(el);
+    });
+  }
+
+  function renderUnitList(cfg) {
+    const list = $("#unit-list"); list.innerHTML = "";
+    Object.entries(IF.UNITS).forEach(([key, u]) => {
+      const el = optionEl(false,
+        `<div class="opt-name">${u.name}<span class="opt-cost">${u.cost} pts</span></div>
+         <div class="opt-desc">${u.desc}</div>
+         <div class="opt-stats">
+           <span class="stat-chip">HP ${u.hp}</span>
+           <span class="stat-chip">DMG ${u.damage}</span>
+           <span class="stat-chip">RNG ${u.range}</span>
+         </div>`);
+      el.addEventListener("click", () => {
+        const cost = IF.squadCost(cfg.army.squad);
+        if (cost + u.cost <= IF.ARMY_BUDGET) { cfg.army.squad.push(key); renderSquad(cfg); }
+        else flashBudget();
+      });
+      list.appendChild(el);
+    });
+  }
+
+  function renderSquad(cfg) {
+    const ul = $("#squad-list"); ul.innerHTML = "";
+    if (cfg.army.squad.length === 0) {
+      ul.innerHTML = `<div class="squad-empty">No units deployed yet. Click units to add them.</div>`;
+    }
+    cfg.army.squad.forEach((key, idx) => {
+      const u = IF.UNITS[key];
+      const li = document.createElement("li");
+      li.innerHTML = `<span>${u.name} <small style="color:#8b949e">(${u.cost})</small></span>`;
+      const rm = document.createElement("button");
+      rm.className = "remove"; rm.textContent = "×";
+      rm.addEventListener("click", () => { cfg.army.squad.splice(idx, 1); renderSquad(cfg); });
+      li.appendChild(rm);
+      ul.appendChild(li);
+    });
+    const cost = IF.squadCost(cfg.army.squad);
+    $("#budget-fill").style.width = (cost / IF.ARMY_BUDGET * 100) + "%";
+    $("#budget-text").textContent = `${cost} / ${IF.ARMY_BUDGET}`;
+    $("#army-summary").textContent =
+      `${IF.FACTIONS[cfg.army.faction].name} · ${cfg.army.squad.length} units · ${cost}/${IF.ARMY_BUDGET} pts`;
+  }
+
+  let flashT;
+  function flashBudget() {
+    const t = $("#budget-text");
+    t.style.color = "#f85149";
+    clearTimeout(flashT);
+    flashT = setTimeout(() => { t.style.color = ""; }, 400);
+  }
+
+  // ---------------- transitions ----------------
+  function loadoutNext() { openArmy(); }
+
+  function armyNext() {
+    // Advance to next player, or launch.
+    if (IF.state.configuring < IF.state.toConfigure - 1) {
+      IF.state.configuring++;
+      openLoadout();
+    } else {
+      launch();
+    }
+  }
+
+  function launch() {
+    const s = IF.state;
+    const config = { mode: s.mode, players: [] };
+
+    if (s.mode === "single") {
+      const p = s.players[0];
+      config.players.push({ ...p, team: 0, side: 0, local: true, controlledLocally: true });
+      // Enemy AI army on team 1 with an opposing faction.
+      config.enemyArmy = pickEnemyArmy(p.army.faction);
+    } else if (s.mode === "local") {
+      config.players.push({ ...s.players[0], team: 0, side: 0, local: true, controlledLocally: true });
+      config.players.push({ ...s.players[1], team: 1, side: 1, local: false, controlledLocally: true });
+    } else if (s.mode === "online") {
+      const p = s.players[0];
+      const team = s.online ? s.online.team : 0;
+      config.players.push({ ...p, team, side: team % 2, local: true, controlledLocally: true });
+      // If server present, remote players join dynamically. Add a small AI garrison
+      // on the opposing team so a solo-connected player still has something to fight.
+      config.enemyArmy = pickEnemyArmy(p.army.faction);
+    }
+
+    IF.showScreen("game");
+    IF.startGame(config);
+  }
+
+  function pickEnemyArmy(playerFaction) {
+    const others = Object.keys(IF.FACTIONS).filter((k) => k !== playerFaction);
+    const faction = others[0] || "legion";
+    return { faction, squad: ["rifleman", "rifleman", "heavy", "scout", "sniper", "medic"] };
+  }
+
+  // ---------------- online ----------------
+  function initOnline() {
+    $("#online-connect").addEventListener("click", async () => {
+      const url = $("#server-url").value.trim();
+      const room = $("#room-code").value.trim() || "arena-1";
+      const name = $("#callsign").value.trim() || "Soldier";
+      const status = $("#online-status");
+      status.className = "status";
+      status.textContent = "Connecting…";
+      try {
+        const res = await IF.net.connect(url, room, name);
+        IF.state.online = res;
+        status.className = "status ok";
+        status.textContent = `Connected — team ${res.team}. Configure your loadout…`;
+        setTimeout(() => proceedOnline(name), 500);
+      } catch (e) {
+        status.className = "status err";
+        status.textContent = "No server reachable — starting offline match vs bots.";
+        IF.state.online = null;
+        setTimeout(() => proceedOnline(name), 900);
+      }
+    });
+  }
+
+  function proceedOnline(name) {
+    IF.state.mode = "online";
+    IF.state.toConfigure = 1;
+    IF.state.players = [freshPlayerConfig(0)];
+    IF.state.players[0].name = name;
+    IF.state.configuring = 0;
+    openLoadout();
+  }
+
+  // ---------------- boot ----------------
+  window.addEventListener("DOMContentLoaded", () => {
+    initMenu();
+    initOnline();
+    $("#loadout-next").addEventListener("click", loadoutNext);
+    $("#army-next").addEventListener("click", armyNext);
+    IF.showScreen("menu");
+  });
+})(window);
+  </script>
+</body>
+</html>

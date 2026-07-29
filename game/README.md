@@ -36,6 +36,22 @@ game/
 The client is dependency-free vanilla JS and Canvas, so it can be hosted as
 plain static files on any host (GitHub Pages, Netlify, Vercel, S3, nginx, …).
 
+## Single-file build (easiest hosting)
+
+`game/dist/iron-front.html` is a **complete, self-contained build** — all CSS and
+JavaScript inlined into one HTML file with no external requests. Drop it on any
+host, or open it locally, and single-player, local 2‑player, loadout, and army
+setup work immediately (online multiplayer still needs the relay server below).
+
+```bash
+# preview the single-file build locally
+cd game/dist
+python3 -m http.server 5199        # then open http://localhost:5199/iron-front.html
+```
+
+Rebuild it from the source modules at any time with `python3 build_bundle.py`
+(from the `game/` directory).
+
 ## Run locally
 
 The game is static files. Serve the `game/` directory with any HTTP server:
